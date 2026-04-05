@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">ShadowCloud</string>
+
+    <string name="error_unexpected">Что-то пошло не так. Попробуйте ещё раз.</string>
+    <string name="btn_close">Закрыть</string>
+    <string name="photos">Фотографии</string>
+</resources>
