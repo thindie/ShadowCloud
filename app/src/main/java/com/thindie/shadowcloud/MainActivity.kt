@@ -50,7 +50,8 @@ class MainActivity : ComponentActivity() {
       SideEffect {
         PermissionsFlow(
           router,
-          appContext = app
+          appContext = app,
+          repository = app.requireWebDavRepository()
         )
           .start()
       }

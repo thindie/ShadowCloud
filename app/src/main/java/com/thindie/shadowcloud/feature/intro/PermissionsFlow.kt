@@ -27,6 +27,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.core.content.ContextCompat
 import com.thindie.shadowcloud.R
+import com.thindie.shadowcloud.application.Application
 import com.thindie.shadowcloud.engine.Command
 import com.thindie.shadowcloud.engine.Route
 import com.thindie.shadowcloud.engine.RouteFactory
@@ -35,6 +36,7 @@ import com.thindie.shadowcloud.engine.ScreenFlow
 import com.thindie.shadowcloud.engine.ScreenScope
 import com.thindie.shadowcloud.engine.ScreenScopeError
 import com.thindie.shadowcloud.feature.home.HomeFlow
+import com.thindie.shadowcloud.feature.webdav.WebDavRepository
 import com.thindie.shadowcloud.uikit.AppScreen
 import com.thindie.shadowcloud.uikit.AppTheme
 import com.thindie.shadowcloud.uikit.Button
@@ -58,11 +60,12 @@ private fun Context.intentApplicationDetailsSettings(): Intent =
 
 class PermissionsFlow(
   private val router: Router,
-  private val appContext: Context,
+  private val appContext: Application,
+  private val repository: WebDavRepository,
 ) : ScreenFlow<Route, PermissionsFlow.Result>(router) {
 
   fun startAppFlow() {
-    HomeFlow(router = router, appContext = appContext)
+    HomeFlow(router = router, appContext = appContext, repository = repository)
       .onFinishBuilder { finish(Result.Success) }
       .start()
   }

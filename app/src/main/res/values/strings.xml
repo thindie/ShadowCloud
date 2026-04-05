@@ -4,4 +4,20 @@
     <string name="error_unexpected">Что-то пошло не так. Попробуйте ещё раз.</string>
     <string name="btn_close">Закрыть</string>
     <string name="photos">Фотографии</string>
+
+    <string name="webdav_title">Удалённый диск (WebDAV)</string>
+    <string name="webdav_empty">Папка пуста</string>
+    <string name="webdav_upload">Загрузить фото</string>
+    <string name="webdav_new_folder">Новая папка</string>
+    <string name="webdav_mkdir_hint">Имя папки</string>
+    <string name="webdav_confirm_mkdir">Создать</string>
+    <string name="webdav_cancel">Отмена</string>
+    <string name="webdav_up">Вверх</string>
+    <string name="webdav_error_unauthorized">Неверный логин или пароль WebDAV.</string>
+    <string name="webdav_error_forbidden">Доступ к этой папке запрещён.</string>
+    <string name="webdav_error_not_found">Путь на сервере не найден (404).</string>
+    <string name="webdav_error_not_found_url">Путь не найден (404):\n%1$s</string>
+    <string name="webdav_error_conflict">Операция отклонена сервером (конфликт).</string>
+    <string name="webdav_error_invalid_response">Сервер вернул неожиданный ответ WebDAV.</string>
+    <string name="webdav_error_upload_open">Не удалось открыть выбранный файл.</string>
 </resources>
