@@ -8,15 +8,23 @@ import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -31,8 +39,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import coil.ImageLoader
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.thindie.shadowcloud.R
 import com.thindie.shadowcloud.application.Application
 import com.thindie.shadowcloud.engine.Command
@@ -42,13 +56,17 @@ import com.thindie.shadowcloud.engine.Router
 import com.thindie.shadowcloud.engine.ScreenFlow
 import com.thindie.shadowcloud.engine.ScreenScope
 import com.thindie.shadowcloud.engine.ScreenScopeError
+import com.thindie.shadowcloud.engine.WorkState
 import com.thindie.shadowcloud.engine.stateSink
 import com.thindie.shadowcloud.error.AppError
+import com.thindie.shadowcloud.feature.filedetails.FileDetailsFlow
+import com.thindie.shadowcloud.feature.filedetails.FileDetailsParams
 import com.thindie.shadowcloud.uikit.Action
 import com.thindie.shadowcloud.uikit.AppScreen
 import com.thindie.shadowcloud.uikit.AppTheme
 import com.thindie.shadowcloud.uikit.Button
 import com.thindie.shadowcloud.uikit.SentenceRow
+import com.thindie.shadowcloud.uikit.ShimmerBox
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -57,12 +75,6 @@ class WebDavFlow(
   private val repository: WebDavRepository,
   private val appContext: Application,
 ) : ScreenFlow<Route, Unit>(router) {
-
-  init {
-    onFinishBuilder {
-      repository.close()
-    }
-  }
 
   override fun start() {
     router.push(main())
@@ -76,7 +88,12 @@ class WebDavFlow(
     initialState = State(),
     execute = ::exec,
     stateSink = ::stateSink,
-    routeContent = { WebDavScreen() },
+    routeContent = {
+      WebDavScreenBody(
+        thumbnailsUrl = { list, name -> repository.fileUrlForOriginal(list, name) },
+        imageLoader = appContext.requireWebDavImageLoader(),
+      )
+    },
     errorMapper = { throwable ->
       ScreenScopeError(
         message = webDavErrorMessage(throwable),
@@ -118,6 +135,7 @@ class WebDavFlow(
     data object Up : WebDavCommand
     data class Upload(val uri: Uri) : WebDavCommand
     data class Mkdir(val name: String) : WebDavCommand
+    data class OpenPhoto(val fileName: String) : WebDavCommand
   }
 
   private suspend fun exec(command: WebDavCommand, state: State): State {
@@ -173,6 +191,16 @@ class WebDavFlow(
           state.copy(items = loaded)
         }
       }
+
+      is WebDavCommand.OpenPhoto -> {
+        val url = repository.fileUrlForOriginal(state.segments, command.fileName)
+        FileDetailsFlow(
+          router = router,
+          imageLoader = appContext.requireWebDavImageLoader(),
+          appContext = appContext,
+        ).start(FileDetailsParams.Photo(url))
+        state
+      }
     }
   }
 }
@@ -191,10 +219,14 @@ private fun displayName(context: Context, uri: Uri): String {
   return "upload.bin"
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
-private fun ScreenScope<WebDavFlow.State, WebDavFlow.WebDavCommand>.WebDavScreen() {
+private fun ScreenScope<WebDavFlow.State, WebDavFlow.WebDavCommand>.WebDavScreenBody(
+  imageLoader: ImageLoader,
+  thumbnailsUrl: (segments: List<String>, name: String) -> String,
+) {
   val st by state.collectAsState()
+  val buckets = remember(st.items) { partitionForBrowse(st.items) }
   val activity = LocalActivity.current
   var mkdirOpen by remember { mutableStateOf(false) }
   var mkdirText by remember { mutableStateOf("") }
@@ -257,11 +289,13 @@ private fun ScreenScope<WebDavFlow.State, WebDavFlow.WebDavCommand>.WebDavScreen
       isRefreshing = this@AppScreen.processing.value is WebDavFlow.WebDavCommand.Refresh,
       onRefresh = { send(WebDavFlow.WebDavCommand.Refresh) },
     ) {
-      LazyColumn(
+      LazyVerticalGrid(
+        columns = GridCells.Adaptive(minSize = 104.dp),
         contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
       ) {
-        item {
+        item(span = { GridItemSpan(maxLineSpan) }) {
           Column(
             verticalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.fillMaxWidth(),
@@ -294,8 +328,32 @@ private fun ScreenScope<WebDavFlow.State, WebDavFlow.WebDavCommand>.WebDavScreen
             }
           }
         }
+
+        items(
+          items = buckets.folders,
+          key = { it.path },
+          span = { GridItemSpan(maxLineSpan) },
+        ) { item ->
+          SentenceRow(
+            modifier = Modifier
+              .border(
+                border = BorderStroke(
+                  width = 1.2.dp,
+                  color = AppTheme.colors.backgroundSecondary,
+                ),
+                shape = RoundedCornerShape(20.dp),
+              )
+              .fillMaxWidth(),
+            painter = null,
+            title = item.name + "/",
+            subtitle = null,
+            loading = false,
+            onClick = { send(WebDavFlow.WebDavCommand.Open(item)) },
+          )
+        }
+
         if (st.items.isEmpty()) {
-          item {
+          item(span = { GridItemSpan(maxLineSpan) }) {
             Text(
               text = stringResource(R.string.webdav_empty),
               style = AppTheme.typography.bodyMedium,
@@ -303,23 +361,25 @@ private fun ScreenScope<WebDavFlow.State, WebDavFlow.WebDavCommand>.WebDavScreen
               modifier = Modifier.padding(vertical = 24.dp),
             )
           }
+        } else if (buckets.folders.isEmpty() && buckets.imageFiles.isEmpty()) {
+          item(span = { GridItemSpan(maxLineSpan) }) {
+            Text(
+              text = stringResource(R.string.webdav_no_images_here),
+              style = AppTheme.typography.bodyMedium,
+              color = AppTheme.colors.contentSecondary,
+              modifier = Modifier.padding(vertical = 24.dp),
+            )
+          }
         } else {
-          items(st.items, key = { it.path }) { item ->
-            SentenceRow(
-              modifier = Modifier
-                .border(
-                  border = BorderStroke(
-                    width = 1.2.dp,
-                    color = AppTheme.colors.backgroundSecondary,
-                  ),
-                  shape = RoundedCornerShape(20.dp),
-                )
-                .fillMaxWidth(),
-              painter = null,
-              title = item.name + if (item.isDirectory) "/" else "",
-              subtitle = if (item.isDirectory) null else formatSize(item.size),
-              loading = false,
-              onClick = { send(WebDavFlow.WebDavCommand.Open(item)) },
+          items(
+            items = buckets.imageFiles,
+            key = { it.path },
+          ) { file ->
+            val thumbUrl = thumbnailsUrl(st.segments, file.name)
+            PhotoGridCell(
+              thumbUrl = thumbUrl,
+              imageLoader = imageLoader,
+              onClick = { send(WebDavFlow.WebDavCommand.OpenPhoto(file.name)) },
             )
           }
         }
@@ -328,17 +388,69 @@ private fun ScreenScope<WebDavFlow.State, WebDavFlow.WebDavCommand>.WebDavScreen
   }
 }
 
+@Composable
+private fun PhotoGridCell(
+  thumbUrl: String,
+  imageLoader: ImageLoader,
+  onClick: () -> Unit,
+) {
+  var state by remember { mutableStateOf<WorkState>(WorkState.Running) }
+  val context = LocalContext.current
+  val tileShape = RoundedCornerShape(12.dp)
+  Box(
+    modifier = Modifier
+      .aspectRatio(1f)
+      .clip(tileShape)
+      .border(
+        border = BorderStroke(1.dp, AppTheme.colors.backgroundSecondary),
+        shape = tileShape,
+      )
+      .clickable(onClick = onClick),
+  ) {
+    AnimatedContent(
+      modifier = Modifier.fillMaxSize(),
+      targetState = state
+    ) { s ->
+      when (s) {
+        is WorkState.Error -> {
+          Text(stringResource(R.string.photos))
+        }
+
+        WorkState.Idle,
+        WorkState.Running -> {
+          AsyncImage(
+            model = ImageRequest.Builder(context)
+              .data(thumbUrl)
+              .crossfade(true)
+              .build(),
+            contentDescription = null,
+            imageLoader = imageLoader,
+            modifier = Modifier
+              .clip(tileShape)
+              .fillMaxSize(),
+            contentScale = ContentScale.Crop,
+            onError = {
+              state = WorkState.Error("AsyncImage loading fails")
+            },
+            onLoading = {
+              state = WorkState.Running
+            },
+            onSuccess = {
+              state = WorkState.Idle
+            },
+          )
+          if (s is WorkState.Running) {
+            ShimmerBox(modifier = Modifier.fillMaxSize())
+          }
+        }
+
+        WorkState.NotStarted -> Unit
+      }
+    }
+  }
+}
+
 private fun breadcrumb(segments: List<String>): String {
   if (segments.isEmpty()) return "/"
   return "/" + segments.joinToString("/")
-}
-
-private fun formatSize(bytes: Long): String {
-  if (bytes <= 0L) return "—"
-  val kb = bytes / 1024.0
-  return if (kb < 1024) {
-    "%.1f KB".format(kb)
-  } else {
-    "%.1f MB".format(kb / 1024.0)
-  }
 }

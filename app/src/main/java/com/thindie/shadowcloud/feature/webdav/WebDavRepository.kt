@@ -8,6 +8,7 @@ import com.thindie.shadowcloud.error.AppError
 import io.ktor.client.HttpClient
 import io.ktor.http.ContentType
 import io.ktor.utils.io.jvm.javaio.toByteReadChannel
+import java.io.ByteArrayInputStream
 import java.net.URL
 
 class WebDavRepository(
@@ -50,9 +51,27 @@ class WebDavRepository(
     }
   }
 
+  fun fileUrlForOriginal(segments: List<String>, fileName: String): String =
+    buildFileUrl(segments, fileName.trim().trimStart('/'))
+
+  fun fileUrlForThumbnail(segments: List<String>, originalFileName: String): String =
+    buildFileUrl(
+      segments + listOf(THUMBNAILS_SEGMENT),
+      thumbnailSidecarFileName(originalFileName),
+    )
+
+  private suspend fun ensureThumbnailsCollection(segments: List<String>) {
+    val url = buildCollectionUrl(segments + listOf(THUMBNAILS_SEGMENT))
+    when (val result = client().mkcol(url)) {
+      is MkcolResult.Failed -> throw webDavErrorFromStatus(result.status, url)
+      else -> Unit
+    }
+  }
+
   suspend fun uploadPhoto(segments: List<String>, uri: Uri, remoteFileName: String) {
     val name = remoteFileName.trim().trimStart('/')
     if (name.isEmpty()) return
+    ensureThumbnailsCollection(segments)
     val mime = resolver.getType(uri) ?: "application/octet-stream"
     val contentType = ContentType.parse(mime)
     val size = queryOpenableSize(uri)
@@ -65,6 +84,20 @@ class WebDavRepository(
         bodyContentType = contentType,
         body = channel,
       )
+    }
+    val thumbBytes = generateJpegThumbnail(appContext, uri)
+    if (thumbBytes.isNotEmpty()) {
+      val thumbName = thumbnailSidecarFileName(name)
+      val thumbUrl = buildFileUrl(segments + listOf(THUMBNAILS_SEGMENT), thumbName)
+      ByteArrayInputStream(thumbBytes).use { thumbIn ->
+        val thumbChannel = thumbIn.toByteReadChannel()
+        client().putStream(
+          urlString = thumbUrl,
+          contentLength = thumbBytes.size.toLong(),
+          bodyContentType = ContentType.Image.JPEG,
+          body = thumbChannel,
+        )
+      }
     }
   }
 

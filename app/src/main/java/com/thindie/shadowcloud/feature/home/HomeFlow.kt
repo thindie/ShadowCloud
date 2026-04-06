@@ -107,7 +107,9 @@ class HomeFlow(
             router = router,
             repository = repository,
             appContext = appContext
-          ).start()
+          )
+            .onFinishBuilder { repository.close() }
+            .start()
         }
         homeState
       }

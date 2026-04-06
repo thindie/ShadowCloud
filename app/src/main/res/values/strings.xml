@@ -20,4 +20,8 @@
     <string name="webdav_error_conflict">Операция отклонена сервером (конфликт).</string>
     <string name="webdav_error_invalid_response">Сервер вернул неожиданный ответ WebDAV.</string>
     <string name="webdav_error_upload_open">Не удалось открыть выбранный файл.</string>
+    <string name="webdav_no_images_here">В этой папке нет изображений (или ещё нет миниатюр).</string>
+    <string name="file_details_stub_document">Документ «%1$s»: просмотр пока не поддерживается.</string>
+    <string name="file_details_stub_pdf">PDF «%1$s»: просмотр пока не поддерживается.</string>
+    <string name="file_details_stub_other">Файл «%1$s»: просмотр пока не поддерживается.</string>
 </resources>
