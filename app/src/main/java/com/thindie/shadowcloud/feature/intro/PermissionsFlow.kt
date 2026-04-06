@@ -36,7 +36,7 @@ import com.thindie.shadowcloud.engine.ScreenFlow
 import com.thindie.shadowcloud.engine.ScreenScope
 import com.thindie.shadowcloud.engine.ScreenScopeError
 import com.thindie.shadowcloud.feature.home.HomeFlow
-import com.thindie.shadowcloud.feature.webdav.WebDavRepository
+import com.thindie.shadowcloud.feature.webdav.data.WebDavRepository
 import com.thindie.shadowcloud.uikit.AppScreen
 import com.thindie.shadowcloud.uikit.AppTheme
 import com.thindie.shadowcloud.uikit.Button

@@ -1,4 +1,4 @@
-package com.thindie.shadowcloud.feature.webdav
+package com.thindie.shadowcloud.feature.webdav.data
 
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO

@@ -5,7 +5,7 @@ import android.util.Base64
 import coil.ImageLoader
 import com.thindie.shadowcloud.engine.Router
 import com.thindie.shadowcloud.feature.auth.Creds
-import com.thindie.shadowcloud.feature.webdav.WebDavRepository
+import com.thindie.shadowcloud.feature.webdav.data.WebDavRepository
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import okhttp3.OkHttpClient

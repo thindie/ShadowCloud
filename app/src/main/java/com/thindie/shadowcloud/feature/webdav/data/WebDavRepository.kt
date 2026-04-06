@@ -1,10 +1,14 @@
-package com.thindie.shadowcloud.feature.webdav
+package com.thindie.shadowcloud.feature.webdav.data
 
 import android.content.ContentResolver
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
 import com.thindie.shadowcloud.error.AppError
+import com.thindie.shadowcloud.feature.webdav.THUMBNAILS_SEGMENT
+import com.thindie.shadowcloud.feature.webdav.WebDavItem
+import com.thindie.shadowcloud.feature.webdav.parseWebDavPropfind
+import com.thindie.shadowcloud.feature.webdav.thumbnailSidecarFileName
 import io.ktor.client.HttpClient
 import io.ktor.http.ContentType
 import io.ktor.utils.io.jvm.javaio.toByteReadChannel
@@ -73,7 +77,7 @@ class WebDavRepository(
     if (name.isEmpty()) return
     ensureThumbnailsCollection(segments)
     val mime = resolver.getType(uri) ?: "application/octet-stream"
-    val contentType = ContentType.parse(mime)
+    val contentType = ContentType.Companion.parse(mime)
     val size = queryOpenableSize(uri)
     val stream = resolver.openInputStream(uri) ?: throw AppError.WebDav.UploadOpenFailed
     stream.use { input ->

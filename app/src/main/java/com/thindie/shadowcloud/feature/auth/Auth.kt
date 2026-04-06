@@ -3,7 +3,7 @@ package com.thindie.shadowcloud.feature.auth
 import com.thindie.shadowcloud.application.AppVersion
 import com.thindie.shadowcloud.application.SemanticVersion
 import com.thindie.shadowcloud.error.AppError
-import com.thindie.shadowcloud.feature.webdav.newAuthenticatedWebdavClient
+import com.thindie.shadowcloud.feature.webdav.data.newAuthenticatedWebdavClient
 import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsText
 import kotlinx.coroutines.withTimeoutOrNull

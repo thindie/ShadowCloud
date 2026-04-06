@@ -5,7 +5,7 @@
     <string name="btn_close">Закрыть</string>
     <string name="photos">Фотографии</string>
 
-    <string name="webdav_title">Удалённый диск (WebDAV)</string>
+    <string name="webdav_title">Облако</string>
     <string name="webdav_empty">Папка пуста</string>
     <string name="webdav_upload">Загрузить фото</string>
     <string name="webdav_new_folder">Новая папка</string>

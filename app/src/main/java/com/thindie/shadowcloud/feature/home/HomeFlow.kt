@@ -19,6 +19,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.thindie.shadowcloud.R
@@ -32,7 +33,7 @@ import com.thindie.shadowcloud.engine.ScreenScope
 import com.thindie.shadowcloud.engine.ScreenScopeError
 import com.thindie.shadowcloud.engine.stateSink
 import com.thindie.shadowcloud.feature.webdav.WebDavFlow
-import com.thindie.shadowcloud.feature.webdav.WebDavRepository
+import com.thindie.shadowcloud.feature.webdav.data.WebDavRepository
 import com.thindie.shadowcloud.uikit.Action
 import com.thindie.shadowcloud.uikit.AppScreen
 import com.thindie.shadowcloud.uikit.AppTheme
@@ -161,13 +162,13 @@ fun ScreenScope<HomeFlow.State, HomeFlow.HomeCommand>.HomeScreen() {
             modifier = Modifier
               .border(
                 border = BorderStroke(
-                  width = 1.2.dp,
-                  color = AppTheme.colors.backgroundSecondary
+                  width = 1.4.dp,
+                  color = AppTheme.colors.contentSecondary
                 ),
                 shape = RoundedCornerShape(20.dp)
               )
               .fillMaxWidth(),
-            painter = null,
+            painter = painterResource(R.drawable.ic_camera_32),
             title = stringResource(item.titleRef),
             subtitle = null,
             loading = false,

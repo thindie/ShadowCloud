@@ -15,7 +15,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -28,6 +27,8 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -38,10 +39,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import coil.ImageLoader
@@ -61,11 +64,12 @@ import com.thindie.shadowcloud.engine.stateSink
 import com.thindie.shadowcloud.error.AppError
 import com.thindie.shadowcloud.feature.filedetails.FileDetailsFlow
 import com.thindie.shadowcloud.feature.filedetails.FileDetailsParams
+import com.thindie.shadowcloud.feature.webdav.common.Folder
+import com.thindie.shadowcloud.feature.webdav.data.WebDavRepository
 import com.thindie.shadowcloud.uikit.Action
 import com.thindie.shadowcloud.uikit.AppScreen
 import com.thindie.shadowcloud.uikit.AppTheme
 import com.thindie.shadowcloud.uikit.Button
-import com.thindie.shadowcloud.uikit.SentenceRow
 import com.thindie.shadowcloud.uikit.ShimmerBox
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -77,15 +81,15 @@ class WebDavFlow(
 ) : ScreenFlow<Route, Unit>(router) {
 
   override fun start() {
-    router.push(main())
+    router.push(browseRoute(emptyList()))
   }
 
   fun stateSink(screenScope: ScreenScope<State, WebDavCommand>) {
     screenScope.stateSink { }
   }
 
-  fun main() = RouteFactory.create(
-    initialState = State(),
+  private fun browseRoute(segments: List<String>) = RouteFactory.create(
+    initialState = State(segments = segments, items = emptyList()),
     execute = ::exec,
     stateSink = ::stateSink,
     routeContent = {
@@ -132,7 +136,6 @@ class WebDavFlow(
     data object Refresh : WebDavCommand
     data object DismissError : WebDavCommand
     data class Open(val item: WebDavItem) : WebDavCommand
-    data object Up : WebDavCommand
     data class Upload(val uri: Uri) : WebDavCommand
     data class Mkdir(val name: String) : WebDavCommand
     data class OpenPhoto(val fileName: String) : WebDavCommand
@@ -141,7 +144,11 @@ class WebDavFlow(
   private suspend fun exec(command: WebDavCommand, state: State): State {
     return when (command) {
       WebDavCommand.Back -> {
-        finish(Unit)
+        if (state.segments.isNotEmpty()) {
+          back()
+        } else {
+          finish(Unit)
+        }
         state
       }
 
@@ -155,21 +162,10 @@ class WebDavFlow(
       }
 
       is WebDavCommand.Open -> {
-        withContext(Dispatchers.IO) {
-          if (!command.item.isDirectory) return@withContext state
-          val nextSegments = state.segments + command.item.name.trim().trim('/')
-          val loaded = repository.listChildren(nextSegments)
-          state.copy(segments = nextSegments, items = loaded)
-        }
-      }
-
-      WebDavCommand.Up -> {
-        withContext(Dispatchers.IO) {
-          if (state.segments.isEmpty()) return@withContext state
-          val nextSegments = state.segments.dropLast(1)
-          val loaded = repository.listChildren(nextSegments)
-          state.copy(segments = nextSegments, items = loaded)
-        }
+        if (!command.item.isDirectory) return state
+        val nextSegments = state.segments + command.item.name.trim().trim('/')
+        go(browseRoute(nextSegments))
+        state
       }
 
       is WebDavCommand.Upload -> {
@@ -285,32 +281,19 @@ private fun ScreenScope<WebDavFlow.State, WebDavFlow.WebDavCommand>.WebDavScreen
       )
     }
 
-    PullToRefreshBox(
-      isRefreshing = this@AppScreen.processing.value is WebDavFlow.WebDavCommand.Refresh,
-      onRefresh = { send(WebDavFlow.WebDavCommand.Refresh) },
-    ) {
-      LazyVerticalGrid(
-        columns = GridCells.Adaptive(minSize = 104.dp),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    Box(modifier = Modifier.fillMaxSize()) {
+      PullToRefreshBox(
+        isRefreshing = this@AppScreen.processing.value is WebDavFlow.WebDavCommand.Refresh,
+        onRefresh = { send(WebDavFlow.WebDavCommand.Refresh) },
+        modifier = Modifier.fillMaxSize(),
       ) {
-        item(span = { GridItemSpan(maxLineSpan) }) {
-          Column(
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.fillMaxWidth(),
-          ) {
-            Button(
-              modifier = Modifier.fillMaxWidth(),
-              text = stringResource(R.string.webdav_upload),
-              onClick = {
-                if (activity != null) {
-                  pickVisualMedia.launch(
-                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
-                  )
-                }
-              },
-            )
+        LazyVerticalGrid(
+          columns = GridCells.Adaptive(minSize = 104.dp),
+          contentPadding = PaddingValues(16.dp),
+          verticalArrangement = Arrangement.spacedBy(10.dp),
+          horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+          item(span = { GridItemSpan(maxLineSpan) }) {
             Button(
               modifier = Modifier.fillMaxWidth(),
               text = stringResource(R.string.webdav_new_folder),
@@ -319,70 +302,71 @@ private fun ScreenScope<WebDavFlow.State, WebDavFlow.WebDavCommand>.WebDavScreen
                 mkdirOpen = true
               },
             )
-            if (st.segments.isNotEmpty()) {
-              Button(
-                modifier = Modifier.fillMaxWidth(),
-                text = stringResource(R.string.webdav_up),
-                onClick = { send(WebDavFlow.WebDavCommand.Up) },
+          }
+
+          items(
+            items = buckets.folders,
+            key = { it.path },
+            span = { GridItemSpan(maxLineSpan) },
+          ) { item ->
+            Folder(
+              modifier = Modifier
+                .fillMaxWidth(),
+              title = item.name + "/",
+              onClick = { send(WebDavFlow.WebDavCommand.Open(item)) },
+            )
+          }
+
+          if (st.items.isEmpty()) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
+              Text(
+                text = stringResource(R.string.webdav_empty),
+                style = AppTheme.typography.bodyMedium,
+                color = AppTheme.colors.contentSecondary,
+                modifier = Modifier.padding(vertical = 24.dp),
+              )
+            }
+          } else if (buckets.folders.isEmpty() && buckets.imageFiles.isEmpty()) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
+              Text(
+                text = stringResource(R.string.webdav_no_images_here),
+                style = AppTheme.typography.bodyMedium,
+                color = AppTheme.colors.contentSecondary,
+                modifier = Modifier.padding(vertical = 24.dp),
+              )
+            }
+          } else {
+            items(
+              items = buckets.imageFiles,
+              key = { it.path },
+            ) { file ->
+              val thumbUrl = thumbnailsUrl(st.segments, file.name)
+              PhotoGridCell(
+                thumbUrl = thumbUrl,
+                imageLoader = imageLoader,
+                onClick = { send(WebDavFlow.WebDavCommand.OpenPhoto(file.name)) },
               )
             }
           }
         }
+      }
 
-        items(
-          items = buckets.folders,
-          key = { it.path },
-          span = { GridItemSpan(maxLineSpan) },
-        ) { item ->
-          SentenceRow(
-            modifier = Modifier
-              .border(
-                border = BorderStroke(
-                  width = 1.2.dp,
-                  color = AppTheme.colors.backgroundSecondary,
-                ),
-                shape = RoundedCornerShape(20.dp),
-              )
-              .fillMaxWidth(),
-            painter = null,
-            title = item.name + "/",
-            subtitle = null,
-            loading = false,
-            onClick = { send(WebDavFlow.WebDavCommand.Open(item)) },
-          )
-        }
-
-        if (st.items.isEmpty()) {
-          item(span = { GridItemSpan(maxLineSpan) }) {
-            Text(
-              text = stringResource(R.string.webdav_empty),
-              style = AppTheme.typography.bodyMedium,
-              color = AppTheme.colors.contentSecondary,
-              modifier = Modifier.padding(vertical = 24.dp),
+      FloatingActionButton(
+        onClick = {
+          if (activity != null) {
+            pickVisualMedia.launch(
+              PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
             )
           }
-        } else if (buckets.folders.isEmpty() && buckets.imageFiles.isEmpty()) {
-          item(span = { GridItemSpan(maxLineSpan) }) {
-            Text(
-              text = stringResource(R.string.webdav_no_images_here),
-              style = AppTheme.typography.bodyMedium,
-              color = AppTheme.colors.contentSecondary,
-              modifier = Modifier.padding(vertical = 24.dp),
-            )
-          }
-        } else {
-          items(
-            items = buckets.imageFiles,
-            key = { it.path },
-          ) { file ->
-            val thumbUrl = thumbnailsUrl(st.segments, file.name)
-            PhotoGridCell(
-              thumbUrl = thumbUrl,
-              imageLoader = imageLoader,
-              onClick = { send(WebDavFlow.WebDavCommand.OpenPhoto(file.name)) },
-            )
-          }
-        }
+        },
+        modifier = Modifier
+          .align(Alignment.BottomEnd)
+          .padding(16.dp),
+      ) {
+        Icon(
+          painter = painterResource(R.drawable.ic_camera_32),
+          contentDescription = stringResource(R.string.webdav_upload),
+        )
       }
     }
   }
@@ -417,7 +401,8 @@ private fun PhotoGridCell(
         }
 
         WorkState.Idle,
-        WorkState.Running -> {
+        WorkState.Running,
+          -> {
           AsyncImage(
             model = ImageRequest.Builder(context)
               .data(thumbUrl)
@@ -444,7 +429,7 @@ private fun PhotoGridCell(
           }
         }
 
-        WorkState.NotStarted -> Unit
+        WorkState.NotStarted -> ShimmerBox(modifier = Modifier.fillMaxSize())
       }
     }
   }

@@ -1,4 +1,4 @@
-package com.thindie.shadowcloud.feature.webdav
+package com.thindie.shadowcloud.feature.webdav.data
 
 import android.content.Context
 import android.graphics.Bitmap
@@ -7,6 +7,7 @@ import android.net.Uri
 import java.io.ByteArrayOutputStream
 import kotlin.math.max
 import kotlin.math.roundToInt
+import androidx.core.graphics.scale
 
 private const val JPEG_QUALITY = 82
 
@@ -53,5 +54,5 @@ private fun scaleToMaxEdge(bitmap: Bitmap, maxEdgePx: Int): Bitmap {
   val scale = maxEdgePx.toFloat() / longest
   val nw = (w * scale).roundToInt().coerceAtLeast(1)
   val nh = (h * scale).roundToInt().coerceAtLeast(1)
-  return Bitmap.createScaledBitmap(bitmap, nw, nh, true)
+  return bitmap.scale(nw, nh)
 }
