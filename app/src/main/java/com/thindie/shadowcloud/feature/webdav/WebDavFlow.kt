@@ -9,33 +9,40 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -43,13 +50,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
-import coil.ImageLoader
 import coil.compose.AsyncImage
-import coil.request.ImageRequest
 import com.thindie.shadowcloud.R
 import com.thindie.shadowcloud.application.Application
 import com.thindie.shadowcloud.engine.Command
@@ -65,12 +70,16 @@ import com.thindie.shadowcloud.error.AppError
 import com.thindie.shadowcloud.feature.filedetails.FileDetailsFlow
 import com.thindie.shadowcloud.feature.filedetails.FileDetailsParams
 import com.thindie.shadowcloud.feature.webdav.common.Folder
+import com.thindie.shadowcloud.feature.webdav.common.LocalImageLoader
+import com.thindie.shadowcloud.feature.webdav.common.rememberImageRequest
 import com.thindie.shadowcloud.feature.webdav.data.WebDavRepository
 import com.thindie.shadowcloud.uikit.Action
 import com.thindie.shadowcloud.uikit.AppScreen
 import com.thindie.shadowcloud.uikit.AppTheme
-import com.thindie.shadowcloud.uikit.Button
+import com.thindie.shadowcloud.uikit.Dialog
 import com.thindie.shadowcloud.uikit.ShimmerBox
+import com.thindie.shadowcloud.uikit.VSpacer
+import com.thindie.shadowcloud.uikit.surface
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -95,7 +104,6 @@ class WebDavFlow(
     routeContent = {
       WebDavScreenBody(
         thumbnailsUrl = { list, name -> repository.fileUrlForOriginal(list, name) },
-        imageLoader = appContext.requireWebDavImageLoader(),
       )
     },
     errorMapper = { throwable ->
@@ -189,12 +197,21 @@ class WebDavFlow(
       }
 
       is WebDavCommand.OpenPhoto -> {
-        val url = repository.fileUrlForOriginal(state.segments, command.fileName)
+        val buckets = partitionForBrowse(state.items)
+        val imageFiles = buckets.imageFiles
+        if (imageFiles.isEmpty()) return state
+        val idx = imageFiles.indexOfFirst { it.name == command.fileName }
+        if (idx < 0) return state
+        val urls = imageFiles.map { repository.fileUrlForOriginal(state.segments, it.name) }
         FileDetailsFlow(
           router = router,
-          imageLoader = appContext.requireWebDavImageLoader(),
-          appContext = appContext,
-        ).start(FileDetailsParams.Photo(url))
+          imageLoader = appContext.requireImageLoader(),
+          params = FileDetailsParams.Photo(
+            segments = state.segments,
+            imageUrls = urls,
+            index = idx,
+          ),
+        ).start()
         state
       }
     }
@@ -218,7 +235,6 @@ private fun displayName(context: Context, uri: Uri): String {
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 private fun ScreenScope<WebDavFlow.State, WebDavFlow.WebDavCommand>.WebDavScreenBody(
-  imageLoader: ImageLoader,
   thumbnailsUrl: (segments: List<String>, name: String) -> String,
 ) {
   val st by state.collectAsState()
@@ -239,53 +255,53 @@ private fun ScreenScope<WebDavFlow.State, WebDavFlow.WebDavCommand>.WebDavScreen
     title = stringResource(R.string.webdav_title),
     subtitle = breadcrumb(st.segments),
     primary = Action(
-      icon = R.drawable.ic_arrow_back_24,
+      resRef = R.drawable.ic_arrow_back_24,
       listener = { send(WebDavFlow.WebDavCommand.Back) },
     ),
   ) {
     BackHandler { send(WebDavFlow.WebDavCommand.Back) }
 
     if (mkdirOpen) {
-      AlertDialog(
-        containerColor = AppTheme.colors.backgroundPrimary,
-        onDismissRequest = { mkdirOpen = false },
-        title = { Text(stringResource(R.string.webdav_new_folder)) },
-        text = {
-          OutlinedTextField(
-            value = mkdirText,
-            onValueChange = { mkdirText = it },
-            label = { Text(stringResource(R.string.webdav_mkdir_hint)) },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-          )
+      Dialog(
+        content = {
+          Column {
+            Text(
+              text = stringResource(R.string.webdav_mkdir_hint),
+              style = AppTheme.typography.labelLarge,
+              color = AppTheme.colors.contentSecondary
+            )
+            VSpacer(2.dp)
+            BasicTextField(
+              modifier = Modifier
+                .fillMaxWidth()
+                .background(AppTheme.colors.backgroundSecondary, shape = RoundedCornerShape(16.dp))
+                .padding(16.dp),
+              textStyle = TextStyle.Default.copy(
+                AppTheme.colors.contentSecondary
+              ),
+              value = mkdirText,
+              onValueChange = { mkdirText = it },
+            )
+          }
         },
-        confirmButton = {
-          Button(
-            text = stringResource(R.string.webdav_confirm_mkdir),
-            onClick = {
-              send(WebDavFlow.WebDavCommand.Mkdir(mkdirText))
-              mkdirOpen = false
-              mkdirText = ""
-            },
-          )
-        },
-        dismissButton = {
-          Button(
-            text = stringResource(R.string.webdav_cancel),
-            onClick = {
-              mkdirOpen = false
-              mkdirText = ""
-            },
-          )
-        },
+        onDismiss = { mkdirOpen = false },
+        primary = Action(
+          listener = {
+            send(WebDavFlow.WebDavCommand.Mkdir(mkdirText))
+            mkdirOpen = false
+            mkdirText = ""
+          },
+          resRef = R.string.webdav_confirm_mkdir
+        )
       )
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
       PullToRefreshBox(
-        isRefreshing = this@AppScreen.processing.value is WebDavFlow.WebDavCommand.Refresh,
+        isRefreshing = false,
         onRefresh = { send(WebDavFlow.WebDavCommand.Refresh) },
         modifier = Modifier.fillMaxSize(),
+        indicator = { }
       ) {
         LazyVerticalGrid(
           columns = GridCells.Adaptive(minSize = 104.dp),
@@ -293,17 +309,6 @@ private fun ScreenScope<WebDavFlow.State, WebDavFlow.WebDavCommand>.WebDavScreen
           verticalArrangement = Arrangement.spacedBy(10.dp),
           horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-          item(span = { GridItemSpan(maxLineSpan) }) {
-            Button(
-              modifier = Modifier.fillMaxWidth(),
-              text = stringResource(R.string.webdav_new_folder),
-              onClick = {
-                mkdirText = ""
-                mkdirOpen = true
-              },
-            )
-          }
-
           items(
             items = buckets.folders,
             key = { it.path },
@@ -343,29 +348,57 @@ private fun ScreenScope<WebDavFlow.State, WebDavFlow.WebDavCommand>.WebDavScreen
               val thumbUrl = thumbnailsUrl(st.segments, file.name)
               PhotoGridCell(
                 thumbUrl = thumbUrl,
-                imageLoader = imageLoader,
                 onClick = { send(WebDavFlow.WebDavCommand.OpenPhoto(file.name)) },
               )
             }
           }
         }
       }
-
-      FloatingActionButton(
-        onClick = {
-          if (activity != null) {
-            pickVisualMedia.launch(
-              PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
-            )
-          }
-        },
-        modifier = Modifier
+      Column(
+        Modifier
+          .padding(16.dp)
+          .surface(
+            shadowElevation = 2f,
+            shape = RoundedCornerShape(16.dp),
+            onClick = null,
+            backgroundColor = AppTheme.colors.backgroundSecondary
+          )
+          .padding(16.dp)
           .align(Alignment.BottomEnd)
-          .padding(16.dp),
       ) {
         Icon(
+          modifier = Modifier
+            .size(40.dp)
+            .clickable(
+            onClick = {
+              if (activity != null) {
+                pickVisualMedia.launch(
+                  PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
+                )
+              }
+            },
+            indication = null,
+            interactionSource = null
+          ),
           painter = painterResource(R.drawable.ic_camera_32),
           contentDescription = stringResource(R.string.webdav_upload),
+          tint = AppTheme.colors.accentPrimary
+        )
+        VSpacer(4.dp)
+        Icon(
+          modifier = Modifier
+            .size(40.dp)
+            .clickable(
+              onClick = {
+                mkdirText = ""
+                mkdirOpen = true
+              },
+              indication = null,
+              interactionSource = null
+            ),
+          painter = painterResource(R.drawable.ic_folder_24),
+          contentDescription = null,
+          tint = AppTheme.colors.accentPrimary
         )
       }
     }
@@ -375,11 +408,9 @@ private fun ScreenScope<WebDavFlow.State, WebDavFlow.WebDavCommand>.WebDavScreen
 @Composable
 private fun PhotoGridCell(
   thumbUrl: String,
-  imageLoader: ImageLoader,
   onClick: () -> Unit,
 ) {
-  var state by remember { mutableStateOf<WorkState>(WorkState.Running) }
-  val context = LocalContext.current
+  var state by remember(thumbUrl) { mutableStateOf<WorkState>(WorkState.Running) }
   val tileShape = RoundedCornerShape(12.dp)
   Box(
     modifier = Modifier
@@ -393,7 +424,20 @@ private fun PhotoGridCell(
   ) {
     AnimatedContent(
       modifier = Modifier.fillMaxSize(),
-      targetState = state
+      targetState = state,
+      transitionSpec = {
+        fadeIn(
+          animationSpec = tween(
+            easing = LinearOutSlowInEasing,
+            durationMillis = 400
+          )
+        ) togetherWith fadeOut(
+          animationSpec = tween(
+            easing = LinearOutSlowInEasing,
+            durationMillis = 400
+          )
+        )
+      }
     ) { s ->
       when (s) {
         is WorkState.Error -> {
@@ -403,29 +447,31 @@ private fun PhotoGridCell(
         WorkState.Idle,
         WorkState.Running,
           -> {
-          AsyncImage(
-            model = ImageRequest.Builder(context)
-              .data(thumbUrl)
-              .crossfade(true)
-              .build(),
-            contentDescription = null,
-            imageLoader = imageLoader,
-            modifier = Modifier
-              .clip(tileShape)
-              .fillMaxSize(),
-            contentScale = ContentScale.Crop,
-            onError = {
-              state = WorkState.Error("AsyncImage loading fails")
-            },
-            onLoading = {
-              state = WorkState.Running
-            },
-            onSuccess = {
-              state = WorkState.Idle
-            },
-          )
-          if (s is WorkState.Running) {
-            ShimmerBox(modifier = Modifier.fillMaxSize())
+          val imageLoader = LocalImageLoader.current
+          var onceSucceeded by remember(thumbUrl) { mutableStateOf(false) }
+          key(thumbUrl, onceSucceeded) {
+            AsyncImage(
+              model = rememberImageRequest(thumbUrl),
+              contentDescription = null,
+              imageLoader = imageLoader,
+              modifier = Modifier
+                .clip(tileShape)
+                .fillMaxSize(),
+              contentScale = ContentScale.Crop,
+              onError = {
+                state = WorkState.Error("AsyncImage loading fails")
+              },
+              onLoading = {
+                state = WorkState.Running
+              },
+              onSuccess = {
+                onceSucceeded = true
+                state = WorkState.Idle
+              },
+            )
+            if (s is WorkState.Running && !onceSucceeded) {
+              ShimmerBox(modifier = Modifier.fillMaxSize())
+            }
           }
         }
 
