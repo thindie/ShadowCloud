@@ -31,6 +31,7 @@ import androidx.lifecycle.lifecycleScope
 import com.thindie.shadowcloud.application.Application
 import com.thindie.shadowcloud.engine.Route
 import com.thindie.shadowcloud.feature.intro.PermissionsFlow
+import com.thindie.shadowcloud.feature.webdav.common.LocalImageLoader
 import com.thindie.shadowcloud.uikit.AppTheme
 import com.thindie.shadowcloud.uikit.LocalThemeSwitcher
 import com.thindie.shadowcloud.uikit.ThemeSwitcher
@@ -58,6 +59,7 @@ class MainActivity : ComponentActivity() {
       val themeSwitcher = remember { ThemeSwitcher() }
       CompositionLocalProvider(
         LocalThemeSwitcher provides themeSwitcher,
+        LocalImageLoader provides app.requireImageLoader(),
       ) {
         val themeColors = LocalThemeSwitcher.current.themeFlow.collectAsState(null)
         val isDark = when (themeColors.value) {

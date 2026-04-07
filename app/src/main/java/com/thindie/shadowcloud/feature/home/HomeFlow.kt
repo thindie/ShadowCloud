@@ -133,7 +133,7 @@ fun ScreenScope<HomeFlow.State, HomeFlow.HomeCommand>.HomeScreen() {
   val screenState by state.collectAsState()
   AppScreen(
     secondary = Action(
-      icon = R.drawable.ic_shield_extra_24,
+      resRef = R.drawable.ic_settings_24,
       listener = {
         themeSwitcher.set(
           if (isDark) ThemeSwitcher.Choice.Light else ThemeSwitcher.Choice.Dark

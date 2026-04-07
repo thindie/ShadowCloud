@@ -14,7 +14,7 @@ import kotlin.text.Charsets
 class Application : Application() {
   private var router: Router? = null
   private var repository: WebDavRepository? = null
-  private var webDavImageLoader: ImageLoader? = null
+  private var imageLoader: ImageLoader? = null
 
   val finishCommand = MutableSharedFlow<Unit>(
     replay = 0, extraBufferCapacity = 3, BufferOverflow.DROP_LATEST
@@ -43,8 +43,8 @@ class Application : Application() {
     return requireNotNull(repository)
   }
 
-  fun requireWebDavImageLoader(): ImageLoader {
-    if (webDavImageLoader == null) {
+  fun requireImageLoader(): ImageLoader {
+    if (imageLoader == null) {
       val token = Base64.encodeToString(
         "${Creds.USERNAME}:${Creds.PWD}".toByteArray(Charsets.UTF_8),
         Base64.NO_WRAP,
@@ -58,10 +58,10 @@ class Application : Application() {
           )
         }
         .build()
-      webDavImageLoader = ImageLoader.Builder(this)
+      imageLoader = ImageLoader.Builder(this)
         .okHttpClient(okHttpClient)
         .build()
     }
-    return requireNotNull(webDavImageLoader)
+    return requireNotNull(imageLoader)
   }
 }

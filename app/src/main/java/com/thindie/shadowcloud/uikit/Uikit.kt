@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -34,6 +35,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.StrokeCap
@@ -41,9 +43,10 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import com.thindie.shadowcloud.R
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.thindie.shadowcloud.R
 import com.thindie.shadowcloud.engine.Command
 import com.thindie.shadowcloud.engine.ScreenScope
 import com.thindie.shadowcloud.engine.ScreenScopeError
@@ -312,19 +315,39 @@ fun SentenceRow(
 
 @Composable
 fun CircularProgress(modifier: Modifier = Modifier) {
-  CircularProgressIndicator(
-    modifier = modifier,
-    color = AppTheme.colors.accentPrimary,
-    strokeWidth = 1.2.dp,
-    strokeCap = StrokeCap.Round
-  )
+  Box(modifier, Alignment.Center) {
+    CircularProgressIndicator(
+      modifier = Modifier
+        .rotate(0f)
+        .size(32.dp),
+      color = AppTheme.colors.accentPrimary,
+      strokeWidth = 2.6.dp,
+      strokeCap = StrokeCap.Round
+    )
+    CircularProgressIndicator(
+      modifier = Modifier
+        .rotate(160f)
+        .size(24.dp),
+      color = AppTheme.colors.accentPrimary,
+      strokeWidth = 2.6.dp,
+      strokeCap = StrokeCap.Round
+    )
+  }
+}
+
+@Preview
+@Composable
+private fun CircularProgressPreview() {
+  AppTheme {
+    CircularProgress()
+  }
 }
 
 
 @Immutable
 data class Action(
   val listener: () -> Unit,
-  val icon: Int,
+  val resRef: Int,
 )
 
 @Composable
@@ -336,13 +359,14 @@ fun TopAppBar(
 ) {
   Row(
     modifier = Modifier.fillMaxWidth(),
-    horizontalArrangement = Arrangement.SpaceBetween,
+    horizontalArrangement = Arrangement.Center,
     verticalAlignment = Alignment.CenterVertically,
   ) {
     if (primary != null) {
       IconButton(onClick = primary.listener) {
         Icon(
-          painter = painterResource(primary.icon),
+          modifier = Modifier.size(40.dp),
+          painter = painterResource(primary.resRef),
           contentDescription = null,
           tint = AppTheme.colors.accentPrimary,
         )
@@ -350,6 +374,7 @@ fun TopAppBar(
     } else HSpacer(12.dp)
     if (description != null) {
       Column(
+        modifier = Modifier.weight(1f),
         horizontalAlignment = Alignment.CenterHorizontally,
       ) {
         Text(
@@ -366,15 +391,18 @@ fun TopAppBar(
       }
     } else {
       Text(
+        modifier = Modifier.weight(1f),
         text = title.orEmpty(),
         style = AppTheme.typography.titleLarge,
         color = AppTheme.colors.contentSecondary,
+        textAlign = TextAlign.Center
       )
     }
     if (secondary != null) {
       IconButton(onClick = secondary.listener) {
         Icon(
-          painter = painterResource(secondary.icon),
+          modifier = Modifier.size(40.dp),
+          painter = painterResource(secondary.resRef),
           contentDescription = null,
           tint = AppTheme.colors.accentPrimary,
         )
@@ -382,3 +410,38 @@ fun TopAppBar(
     } else HSpacer(12.dp)
   }
 }
+
+@Composable
+fun Dialog(
+  content: @Composable () -> Unit,
+  onDismiss: () -> Unit,
+  primary: Action,
+  secondary: Action? = null,
+) {
+  AlertDialog(
+    containerColor = AppTheme.colors.backgroundPrimary,
+    onDismissRequest = onDismiss,
+    text = {
+      content()
+    },
+    confirmButton = {
+      Button(
+        text = stringResource(primary.resRef),
+        onClick = {
+          primary.listener.invoke()
+        },
+      )
+    },
+    dismissButton = if (secondary != null) {
+      {
+        Button(
+          text = stringResource(secondary.resRef),
+          onClick = {
+            secondary.listener
+          },
+        )
+      }
+    } else null,
+  )
+}
+
