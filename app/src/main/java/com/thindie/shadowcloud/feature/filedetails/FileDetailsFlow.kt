@@ -38,6 +38,8 @@ import com.thindie.shadowcloud.feature.webdav.common.rememberImageRequest
 import com.thindie.shadowcloud.uikit.Action
 import com.thindie.shadowcloud.uikit.AppScreen
 import com.thindie.shadowcloud.uikit.AppTheme
+import com.thindie.shadowcloud.uikit.pinchZoom
+import com.thindie.shadowcloud.uikit.rememberZoomState
 
 class FileDetailsFlow(
   private val router: Router,
@@ -126,8 +128,15 @@ private fun ScreenScope<FileDetailsState, FileDetailsCommand>.FileDetailsRouteCo
     when (val p = st.params) {
       is FileDetailsParams.Photo -> {
         val url = p.imageUrls.getOrNull(p.index)
+        val zoomState = url?.let {
+          rememberZoomState(
+            key = it,
+            minScale = 1f,
+            maxScale = 4f,
+          )
+        }
         Box(modifier = Modifier.fillMaxSize()) {
-          if (url != null) {
+          if (url != null && zoomState != null) {
             AnimatedVisibility(
               true,
               enter = fadeIn(
@@ -152,6 +161,7 @@ private fun ScreenScope<FileDetailsState, FileDetailsCommand>.FileDetailsRouteCo
             AsyncImage(
               modifier = Modifier
                 .align(Alignment.Center)
+                .pinchZoom(state = zoomState, enabled = true)
                 .fillMaxSize(),
               model = rememberImageRequest(url),
               contentDescription = null,
@@ -159,12 +169,14 @@ private fun ScreenScope<FileDetailsState, FileDetailsCommand>.FileDetailsRouteCo
               contentScale = ContentScale.Fit,
             )
           }
+          val enableEdgeNavigation = zoomState?.isZoomed != true
           Box(
             modifier = Modifier
               .align(Alignment.CenterStart)
               .fillMaxHeight()
               .fillMaxWidth(0.2f)
               .clickable(
+                enabled = enableEdgeNavigation,
                 onClick = {
                   send(FileDetailsCommand.Back)
                 },
@@ -178,6 +190,7 @@ private fun ScreenScope<FileDetailsState, FileDetailsCommand>.FileDetailsRouteCo
               .fillMaxHeight()
               .fillMaxWidth(0.2f)
               .clickable(
+                enabled = enableEdgeNavigation,
                 onClick = {
                   send(FileDetailsCommand.Next)
                 },
