@@ -2,6 +2,7 @@ package com.thindie.shadowcloud.engine
 
 import androidx.compose.runtime.Stable
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 
 
@@ -14,4 +15,7 @@ interface ScreenScope<S : State, C : Command> {
   fun dispose()
   val scope: CoroutineScope?
   fun update(s: S)
+  val event: SharedFlow<ServiceCommand.UiEvent>
+
+  fun sendEvent(event: ServiceCommand.UiEvent)
 }

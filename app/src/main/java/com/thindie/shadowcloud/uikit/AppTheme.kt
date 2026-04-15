@@ -36,10 +36,10 @@ private val LightColorScheme = AppColors(
   contentSecondary = Color(0xFF757575),
   backgroundPrimary = Color.White,
   backgroundSecondary = Color(0xFFF5F7FA),
-  accentPrimary = Color(0xFF4766FF),
+  accentPrimary = Color(0xFFCB7BD9),
   onAccentPrimary = Color(0xFFF5F7FA),
-  successPrimary = Color(0xFF2E7D32),
-  errorPrimary = Color(0xFFD32F2F),
+  successPrimary = Color(0xFF6BB6FA),
+  errorPrimary = Color(0xFFFF992A),
   buttonContentPrimary = Color(0xFFF5F7FA)
 )
 
@@ -131,14 +131,14 @@ object AppTypography {
     fontSize = 40.sp,
     lineHeight = 36.sp,
     letterSpacing = 1.26.sp,
-    fontWeight = FontWeight.W400,
+    fontWeight = FontWeight.ExtraBold,
   )
 
   val headlineMedium = TextStyle(
     fontSize = 32.sp,
     lineHeight = 28.sp,
     letterSpacing = 1.24.sp,
-    fontWeight = FontWeight.W400,
+    fontWeight = FontWeight.Bold,
   )
 
   val headlineSmall = TextStyle(

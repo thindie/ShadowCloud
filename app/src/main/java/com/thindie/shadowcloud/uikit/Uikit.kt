@@ -139,6 +139,10 @@ fun Modifier.surface(
 @Composable
 fun <S : State, C : Command> ScreenScope<S, C>.ErrorMessage() {
   val error = this@ErrorMessage.error.value ?: return
+  val message =
+    error.message
+      ?: error.messageRes?.let { stringResource(it) }
+      ?: stringResource(R.string.error_unexpected)
   Column(
     modifier = Modifier
       .fillMaxSize()
@@ -148,7 +152,7 @@ fun <S : State, C : Command> ScreenScope<S, C>.ErrorMessage() {
     horizontalAlignment = Alignment.CenterHorizontally,
   ) {
     Text(
-      text = error.message,
+      text = message,
       style = AppTheme.typography.titleMedium,
     )
     Row(
@@ -170,8 +174,12 @@ fun <S : State, C : Command> ScreenScope<S, C>.ErrorMessage() {
       error.actions[ScreenScopeError.Actions.Common.ButtonSecondaryRetry]?.let { cmd ->
         val action = error.actions.keys.filterIsInstance<ScreenScopeError.Actions.Common>()
           .first { it is ScreenScopeError.Actions.Common.ButtonSecondaryRetry }
+        val title =
+          action.title
+            ?: action.titleRes?.let { stringResource(it) }
+            .orEmpty()
         Button(
-          text = action?.title.orEmpty(),
+          text = title,
           onClick = {
             when {
               cmd as? ServiceCommand.Prioritized != null -> cmd.execute()
@@ -184,8 +192,12 @@ fun <S : State, C : Command> ScreenScope<S, C>.ErrorMessage() {
       error.actions[ScreenScopeError.Actions.Common.ButtonMain]?.let { cmd ->
         val action = error.actions.keys.filterIsInstance<ScreenScopeError.Actions.Common>()
           .first { it is ScreenScopeError.Actions.Common.ButtonMain }
+        val title =
+          action.title
+            ?: action.titleRes?.let { stringResource(it) }
+            .orEmpty()
         Button(
-          text = action?.title.orEmpty(),
+          text = title,
           onClick = {
             when {
               cmd as? ServiceCommand.Prioritized != null -> cmd.execute()
@@ -365,7 +377,7 @@ fun TopAppBar(
     if (primary != null) {
       IconButton(onClick = primary.listener) {
         Icon(
-          modifier = Modifier.size(40.dp),
+          modifier = Modifier.size(24.dp),
           painter = painterResource(primary.resRef),
           contentDescription = null,
           tint = AppTheme.colors.accentPrimary,
@@ -401,7 +413,7 @@ fun TopAppBar(
     if (secondary != null) {
       IconButton(onClick = secondary.listener) {
         Icon(
-          modifier = Modifier.size(40.dp),
+          modifier = Modifier.size(24.dp),
           painter = painterResource(secondary.resRef),
           contentDescription = null,
           tint = AppTheme.colors.accentPrimary,
