@@ -3,38 +3,23 @@ package com.thindie.shadowcloud.feature.auth
 import com.thindie.shadowcloud.application.AppVersion
 import com.thindie.shadowcloud.application.SemanticVersion
 import com.thindie.shadowcloud.error.AppError
-import io.ktor.client.HttpClient
-import io.ktor.client.engine.cio.CIO
-import io.ktor.client.plugins.auth.Auth
-import io.ktor.client.plugins.auth.providers.BasicAuthCredentials
-import io.ktor.client.plugins.auth.providers.basic
+import com.thindie.shadowcloud.feature.webdav.data.newAuthenticatedWebdavClient
 import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsText
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.IOException
 
-private const val USERNAME = "USERNAME"
-private const val PWD = "PWD"
-
-internal const val URL = "URL"
+object Creds {
+  const val URL = ""
+  const val USERNAME = ""
+  const val PWD = ""
+}
 
 internal fun apkUrlAdjacentToVersionFile(versionFileUrl: String): String {
   val slash = versionFileUrl.lastIndexOf('/')
   val base = if (slash >= 0) versionFileUrl.substring(0, slash + 1) else "$versionFileUrl/"
   return "${base}ShadowCloud.apk"
 }
-
-internal fun newAuthenticatedWebdavClient(userName: String, password: String): HttpClient =
-  HttpClient(CIO) {
-    install(Auth) {
-      basic {
-        credentials {
-          BasicAuthCredentials(username = userName, password = password)
-        }
-        sendWithoutRequest { true }
-      }
-    }
-  }
 
 sealed class AuthGateResult {
   data object Allowed : AuthGateResult()
@@ -73,9 +58,9 @@ internal fun authGateResultForVersionResponse(
 }
 
 suspend fun performAuthGate(
-  userName: String = USERNAME,
-  password: String = PWD,
-  url: String = URL,
+  userName: String = Creds.USERNAME,
+  password: String = Creds.PWD,
+  url: String = Creds.URL,
 ): AuthGateResult {
   val client = newAuthenticatedWebdavClient(userName, password)
   return client.use { client ->

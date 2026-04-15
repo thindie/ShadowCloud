@@ -27,6 +27,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.core.content.ContextCompat
 import com.thindie.shadowcloud.R
+import com.thindie.shadowcloud.application.Application
 import com.thindie.shadowcloud.engine.Command
 import com.thindie.shadowcloud.engine.Route
 import com.thindie.shadowcloud.engine.RouteFactory
@@ -35,6 +36,7 @@ import com.thindie.shadowcloud.engine.ScreenFlow
 import com.thindie.shadowcloud.engine.ScreenScope
 import com.thindie.shadowcloud.engine.ScreenScopeError
 import com.thindie.shadowcloud.feature.home.HomeFlow
+import com.thindie.shadowcloud.feature.webdav.data.WebDavRepository
 import com.thindie.shadowcloud.uikit.AppScreen
 import com.thindie.shadowcloud.uikit.AppTheme
 import com.thindie.shadowcloud.uikit.Button
@@ -58,11 +60,12 @@ private fun Context.intentApplicationDetailsSettings(): Intent =
 
 class PermissionsFlow(
   private val router: Router,
-  private val appContext: Context,
+  private val appContext: Application,
+  private val repository: WebDavRepository,
 ) : ScreenFlow<Route, PermissionsFlow.Result>(router) {
 
   fun startAppFlow() {
-    HomeFlow(router = router, appContext = appContext)
+    HomeFlow(router = router, appContext = appContext, repository = repository)
       .onFinishBuilder { finish(Result.Success) }
       .start()
   }
@@ -326,8 +329,8 @@ private fun IntroScreenContent(scope: ScreenScope<PermissionsFlow.State, Permiss
                 SentenceRow(
                   painter = painterResource(R.drawable.ic_attention_24),
                   onClick = null,
-                  title = "mock",
-                  subtitle = "mock",
+                  title = stringResource(R.string.permissions_rationale_title_mock),
+                  subtitle = stringResource(R.string.permissions_rationale_subtitle_mock),
                   loading = false,
                 )
               },
@@ -335,14 +338,14 @@ private fun IntroScreenContent(scope: ScreenScope<PermissionsFlow.State, Permiss
               dismissButton = {
                 Button(
                   modifier = Modifier.fillMaxWidth(),
-                  text = "mock",
+                  text = stringResource(R.string.permissions_rationale_dismiss_mock),
                   onClick = { send(PermissionsFlow.CommandIntro.ConfirmRationale) }
                 )
               },
               confirmButton = {
                 Button(
                   modifier = Modifier.fillMaxWidth(),
-                  text = "mock",
+                  text = stringResource(R.string.permissions_rationale_confirm_mock),
                   onClick = {
                     activity ?: return@Button
                     val primary = activity.intentAppNotificationSettings()

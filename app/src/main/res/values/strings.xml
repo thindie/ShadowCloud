@@ -2,6 +2,57 @@
     <string name="app_name">ShadowCloud</string>
 
     <string name="error_unexpected">Что-то пошло не так. Попробуйте ещё раз.</string>
+    <string name="error_image_load_failed">Не удалось загрузить изображение.</string>
     <string name="btn_close">Закрыть</string>
+    <string name="btn_ok">Ок</string>
+    <string name="btn_retry">Попробовать снова</string>
     <string name="photos">Фотографии</string>
+
+    <string name="home_data_type">Тип данных</string>
+    <string name="home_photos_subtitle">Хорошие времена</string>
+
+    <string name="webdav_title">Облако</string>
+    <string name="webdav_cloud_storage">Облачное хранилище</string>
+    <string name="webdav_empty">Папка пуста</string>
+    <string name="webdav_upload">Загрузить фото</string>
+    <string name="webdav_new_folder">Новая папка</string>
+    <string name="webdav_mkdir_hint">Имя папки</string>
+    <string name="webdav_confirm_mkdir">Создать</string>
+    <string name="webdav_cancel">Отмена</string>
+    <string name="webdav_up">Вверх</string>
+    <string name="webdav_root_folder">Корневой каталог</string>
+    <string name="webdav_upload_fallback_filename">upload.bin</string>
+    <string name="webdav_error_unauthorized">Неверный логин или пароль WebDAV.</string>
+    <string name="webdav_error_forbidden">Доступ к этой папке запрещён.</string>
+    <string name="webdav_error_not_found">Путь на сервере не найден (404).</string>
+    <string name="webdav_error_not_found_url">Путь не найден (404):\n%1$s</string>
+    <string name="webdav_error_conflict">Операция отклонена сервером (конфликт).</string>
+    <string name="webdav_error_invalid_response">Сервер вернул неожиданный ответ WebDAV.</string>
+    <string name="webdav_error_upload_open">Не удалось открыть выбранный файл.</string>
+    <string name="webdav_no_images_here">В этой папке нет изображений (или ещё нет миниатюр).</string>
+    <string name="share_link">Поделиться ссылкой</string>
+    <string name="share_intake_title">Импорт в облако</string>
+    <string name="share_intake_destination">Папка назначения: %1$s</string>
+    <string name="share_intake_upload">Загрузить</string>
+    <string name="share_intake_cancel">Отмена</string>
+    <string name="share_intake_failed_title">Не удалось прочитать:</string>
+    <string name="webdav_copy_folder_path">Скопировать путь к папке</string>
+    <string name="webdav_more_actions">Дополнительные действия</string>
+    <string name="webdav_sheet_move_from_clipboard">Переместить по ссылке из буфера в эту папку</string>
+    <string name="webdav_sheet_delete">Удалить</string>
+    <string name="webdav_sheet_cancel">Отменить выбор</string>
+    <string name="webdav_sheet_download">Поделиться выбранными</string>
+    <string name="webdav_clipboard_empty">Буфер пуст</string>
+    <string name="webdav_clipboard_move_failed">Не удалось переместить файл с сервера</string>
+    <string name="webdav_clipboard_not_remote">В буфере локальный файл, а не адрес на сервере</string>
+    <string name="webdav_clipboard_invalid_source">Неподходящий адрес: укажите полную ссылку или путь под этим WebDAV</string>
+    <string name="webdav_clipboard_relative_path">Укажите полный путь (от /) или полную ссылку https://…</string>
+    <string name="file_details_stub_document">Документ «%1$s»: просмотр пока не поддерживается.</string>
+    <string name="file_details_stub_pdf">PDF «%1$s»: просмотр пока не поддерживается.</string>
+    <string name="file_details_stub_other">Файл «%1$s»: просмотр пока не поддерживается.</string>
+
+    <string name="permissions_rationale_title_mock">mock</string>
+    <string name="permissions_rationale_subtitle_mock">mock</string>
+    <string name="permissions_rationale_dismiss_mock">mock</string>
+    <string name="permissions_rationale_confirm_mock">mock</string>
 </resources>

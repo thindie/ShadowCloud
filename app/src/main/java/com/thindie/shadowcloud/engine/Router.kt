@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.mutableStateOf
+import com.thindie.shadowcloud.R
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -13,7 +14,9 @@ import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
@@ -99,7 +102,7 @@ object RouteFactory {
     stateSink: (ScreenScope<S, C>) -> Unit = {},
     errorMapper: (e: Throwable) -> ScreenScopeError = { _ ->
       ScreenScopeError(
-        message = "Что-то пошло не так. Попробуйте ещё раз.",
+        messageRes = R.string.error_unexpected,
         actions = mapOf(),
       )
     },
@@ -133,6 +136,20 @@ object RouteFactory {
         private val _error = mutableStateOf<ScreenScopeError?>(null)
         override val error: androidx.compose.runtime.State<ScreenScopeError?>
           get() = _error
+
+        @Stable
+        private val _event = MutableSharedFlow<ServiceCommand.UiEvent>(
+          replay = 0,
+          extraBufferCapacity = 1,
+          onBufferOverflow = BufferOverflow.DROP_OLDEST
+        )
+
+        override val event: SharedFlow<ServiceCommand.UiEvent>
+          get() = _event.asSharedFlow()
+
+        override fun sendEvent(event: ServiceCommand.UiEvent) {
+          _event.send(event)
+        }
 
         init {
           stateSink.invoke(this)
