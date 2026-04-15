@@ -329,8 +329,8 @@ private fun IntroScreenContent(scope: ScreenScope<PermissionsFlow.State, Permiss
                 SentenceRow(
                   painter = painterResource(R.drawable.ic_attention_24),
                   onClick = null,
-                  title = "mock",
-                  subtitle = "mock",
+                  title = stringResource(R.string.permissions_rationale_title_mock),
+                  subtitle = stringResource(R.string.permissions_rationale_subtitle_mock),
                   loading = false,
                 )
               },
@@ -338,14 +338,14 @@ private fun IntroScreenContent(scope: ScreenScope<PermissionsFlow.State, Permiss
               dismissButton = {
                 Button(
                   modifier = Modifier.fillMaxWidth(),
-                  text = "mock",
+                  text = stringResource(R.string.permissions_rationale_dismiss_mock),
                   onClick = { send(PermissionsFlow.CommandIntro.ConfirmRationale) }
                 )
               },
               confirmButton = {
                 Button(
                   modifier = Modifier.fillMaxWidth(),
-                  text = "mock",
+                  text = stringResource(R.string.permissions_rationale_confirm_mock),
                   onClick = {
                     activity ?: return@Button
                     val primary = activity.intentAppNotificationSettings()
