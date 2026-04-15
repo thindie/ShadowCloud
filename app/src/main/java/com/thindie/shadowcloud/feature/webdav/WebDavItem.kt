@@ -8,4 +8,5 @@ data class WebDavItem(
   val isDirectory: Boolean,
   val size: Long,
   val path: String,
+  val previewPath: String?
 )

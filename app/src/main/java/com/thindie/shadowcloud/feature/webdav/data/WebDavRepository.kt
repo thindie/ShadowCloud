@@ -217,7 +217,11 @@ class WebDavRepository(
     }
   }
 
-  suspend fun download(items: List<WebDavItem>, destinationDir: File): List<File>? {
+  suspend fun download(
+    segments: List<String>,
+    items: List<WebDavItem>,
+    destinationDir: File,
+  ): List<File>? {
     val files = coroutineScope {
       items.map { item ->
         async(Dispatchers.IO) {
@@ -225,7 +229,7 @@ class WebDavRepository(
             val fileName = item.path.substringAfterLast("/")
             val file = File(destinationDir, fileName)
 
-            client().prepareGet(item.path).execute { response ->
+            client().prepareGet(fileUrlForOriginal(segments, fileName)).execute { response ->
               val channel: ByteReadChannel = response.bodyAsChannel()
               file.outputStream().use { os ->
                 channel.copyTo(channel = os.channel)

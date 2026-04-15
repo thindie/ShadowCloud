@@ -98,6 +98,7 @@ internal fun parseWebDavPropfind(
                     isDirectory = isCollection,
                     size = currentSize,
                     path = decoded,
+                    previewPath = null
                   ),
                 )
               }
