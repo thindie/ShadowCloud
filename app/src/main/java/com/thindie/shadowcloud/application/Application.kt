@@ -43,6 +43,10 @@ class Application : Application() {
     return requireNotNull(repository)
   }
 
+  fun requireWebDav(): String {
+    return Creds.URL
+  }
+
   fun requireImageLoader(): ImageLoader {
     if (imageLoader == null) {
       val token = Base64.encodeToString(
