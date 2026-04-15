@@ -8,6 +8,7 @@ import io.ktor.client.request.put
 import io.ktor.client.request.request
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
+import io.ktor.client.statement.bodyAsChannel
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
@@ -33,6 +34,12 @@ internal sealed class MkcolResult {
   data object Created : MkcolResult()
   data object AlreadyExists : MkcolResult()
   data class Failed(val status: HttpStatusCode) : MkcolResult()
+}
+
+internal sealed interface WebDavObjectCheck {
+  data object Exists : WebDavObjectCheck
+  data object Missing : WebDavObjectCheck
+  data object HeadNotSupported : WebDavObjectCheck
 }
 
 internal fun webDavErrorFromStatus(
@@ -117,5 +124,81 @@ internal suspend fun HttpClient.mkcol(urlString: String): MkcolResult {
       } else {
         MkcolResult.Failed(response.status)
       }
+  }
+}
+
+internal suspend fun HttpClient.headObject(urlString: String): WebDavObjectCheck {
+  val response: HttpResponse =
+    try {
+      request(urlString) {
+        method = HttpMethod.Head
+      }
+    } catch (re: ResponseException) {
+      return when (re.response.status) {
+        HttpStatusCode.NotFound -> WebDavObjectCheck.Missing
+        HttpStatusCode.MethodNotAllowed, HttpStatusCode.NotImplemented ->
+          WebDavObjectCheck.HeadNotSupported
+        else -> {
+          val url = re.response.call.request.url.toString()
+          throw webDavErrorFromStatus(re.response.status, url)
+        }
+      }
+    }
+
+  return when (response.status) {
+    HttpStatusCode.NotFound -> WebDavObjectCheck.Missing
+    HttpStatusCode.MethodNotAllowed,
+    HttpStatusCode.NotImplemented -> WebDavObjectCheck.HeadNotSupported
+    else -> if (response.status.isSuccessRange()) WebDavObjectCheck.Exists else {
+      val url = response.call.request.url.toString()
+      throw webDavErrorFromStatus(response.status, url)
+    }
+  }
+}
+
+internal suspend fun HttpClient.getChannel(urlString: String): ByteReadChannel? {
+  val response: HttpResponse =
+    try {
+      request(urlString) {
+        method = HttpMethod.Get
+      }
+    } catch (re: ResponseException) {
+      return when (re.response.status) {
+        HttpStatusCode.NotFound -> null
+        else -> {
+          val url = re.response.call.request.url.toString()
+          throw webDavErrorFromStatus(re.response.status, url)
+        }
+      }
+    }
+
+  if (!response.status.isSuccessRange()) {
+    if (response.status == HttpStatusCode.NotFound) return null
+    val url = response.call.request.url.toString()
+    throw webDavErrorFromStatus(response.status, url)
+  }
+  return response.bodyAsChannel()
+}
+
+internal suspend fun HttpClient.moveObject(
+  source: String,
+  destination: String,
+  overwrite: Boolean,
+) {
+  val response: HttpResponse =
+    try {
+      request(source) {
+        method = HttpMethod("MOVE")
+        header("Destination", destination)
+        header("Overwrite", if (overwrite) "T" else "F")
+      }
+    } catch (re: ResponseException) {
+      val url = re.response.call.request.url.toString()
+      throw webDavErrorFromStatus(re.response.status, url)
+    }
+
+  if (!response.status.isSuccessRange()) {
+    val url = response.call.request.url.toString()
+    throw webDavErrorFromStatus(response.status, url)
   }
 }

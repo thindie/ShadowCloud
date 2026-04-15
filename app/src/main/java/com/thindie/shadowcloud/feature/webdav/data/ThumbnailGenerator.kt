@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
+import java.io.File
 import java.io.ByteArrayOutputStream
 import kotlin.math.max
 import kotlin.math.roundToInt
@@ -32,6 +33,38 @@ fun generateJpegThumbnail(
     inSampleSize = sample
   }
   val bitmap = resolver.openInputStream(uri)?.use {
+    BitmapFactory.decodeStream(it, null, decode)
+  } ?: return ByteArray(0)
+
+  val scaled = scaleToMaxEdge(bitmap, maxEdgePx)
+  if (scaled != bitmap) {
+    bitmap.recycle()
+  }
+  val out = ByteArrayOutputStream()
+  scaled.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, out)
+  scaled.recycle()
+  return out.toByteArray()
+}
+
+fun generateJpegThumbnail(
+  file: File,
+  maxEdgePx: Int = 512,
+): ByteArray {
+  val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+  file.inputStream().use {
+    BitmapFactory.decodeStream(it, null, bounds)
+  }
+  if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return ByteArray(0)
+
+  var sample = 1
+  val maxDim = max(bounds.outWidth, bounds.outHeight)
+  while (maxDim / sample > maxEdgePx * 2) {
+    sample *= 2
+  }
+  val decode = BitmapFactory.Options().apply {
+    inSampleSize = sample
+  }
+  val bitmap = file.inputStream().use {
     BitmapFactory.decodeStream(it, null, decode)
   } ?: return ByteArray(0)
 
