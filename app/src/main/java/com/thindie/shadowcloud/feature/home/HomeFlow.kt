@@ -1,17 +1,17 @@
 package com.thindie.shadowcloud.feature.home
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.border
+import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
@@ -133,7 +133,7 @@ fun ScreenScope<HomeFlow.State, HomeFlow.HomeCommand>.HomeScreen() {
   val screenState by state.collectAsState()
   AppScreen(
     secondary = Action(
-      resRef = R.drawable.ic_settings_24,
+      resRef = R.drawable.ic_theme_24,
       listener = {
         themeSwitcher.set(
           if (isDark) ThemeSwitcher.Choice.Light else ThemeSwitcher.Choice.Dark
@@ -142,7 +142,6 @@ fun ScreenScope<HomeFlow.State, HomeFlow.HomeCommand>.HomeScreen() {
     )
   ) {
     BackHandler { send(HomeFlow.HomeCommand.Back) }
-    val st by state.collectAsState()
     val height = LocalWindowInfo.current.containerSize.height.dp
     PullToRefreshBox(
       isRefreshing = false,
@@ -155,22 +154,35 @@ fun ScreenScope<HomeFlow.State, HomeFlow.HomeCommand>.HomeScreen() {
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
       ) {
+        stickyHeader {
+          Column(
+            modifier = Modifier
+              .background(
+                color = AppTheme.colors.backgroundPrimary
+              )
+              .fillMaxWidth()
+          ) {
+            Text(
+              style = AppTheme.typography.headlineLarge,
+              color = AppTheme.colors.contentPrimary,
+              text = stringResource(R.string.app_name)
+            )
+            Text(
+              style = AppTheme.typography.labelMedium,
+              color = AppTheme.colors.contentSecondary,
+              text = stringResource(R.string.home_data_type),
+            )
+          }
+        }
         items(
           items = screenState.types,
         ) { item ->
           SentenceRow(
             modifier = Modifier
-              .border(
-                border = BorderStroke(
-                  width = 1.4.dp,
-                  color = AppTheme.colors.contentSecondary
-                ),
-                shape = RoundedCornerShape(20.dp)
-              )
               .fillMaxWidth(),
             painter = painterResource(R.drawable.ic_camera_32),
             title = stringResource(item.titleRef),
-            subtitle = null,
+            subtitle = item.subtitleRef?.let { stringResource(it) },
             loading = false,
             onClick = { send(HomeFlow.HomeCommand.Select(item)) },
           )
@@ -184,3 +196,10 @@ private val HomeFlow.MediaContent.titleRef get() =
   when (this) {
     HomeFlow.MediaContent.Photo -> R.string.photos
   }
+
+private val HomeFlow.MediaContent.subtitleRef
+  get() =
+    when (this) {
+      HomeFlow.MediaContent.Photo -> R.string.home_photos_subtitle
+    }
+
